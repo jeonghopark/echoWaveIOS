@@ -46,7 +46,7 @@ void ofApp::setup(){
     
     mesh.setMode(OF_PRIMITIVE_TRIANGLES);
     
-    numWidth = 80;
+    numWidth = 180;
     numHeight = 80;
     vertexSpacing = 10;
     
@@ -141,7 +141,8 @@ void ofApp::draw(){
     cam.begin();
     
     ofRotateX(82);
-    ofRotateZ(90);
+    ofRotateY(0);
+    ofRotateZ(270);
     
     for (int j=0; j<numHeight; j++) {
         for (int i=0; i<numWidth; i++) {
