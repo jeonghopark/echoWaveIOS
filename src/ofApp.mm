@@ -3,12 +3,12 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     
-    ofSetOrientation(OF_ORIENTATION_90_RIGHT);
+//    ofSetOrientation(OF_ORIENTATION_90_RIGHT);
     ofSetFrameRate(60);
     
     ofxAccelerometer.setup();               //accesses accelerometer data
     ofxiPhoneAlerts.addListener(this);      //allows elerts to appear while app is running
-	ofRegisterTouchEvents(this);            //method that passes touch events
+    ofRegisterTouchEvents(this);            //method that passes touch events
     
     [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationFade];
     
@@ -22,31 +22,31 @@ void ofApp::setup(){
     //
     numHeight = 256;
     
-	bufferSize = 128;
+    bufferSize = 128;
     initialBufferSize = 128;
-	sampleRate = 44100;
+    sampleRate = 44100;
     
     
-	left.assign(bufferSize, 0.0);
+    left.assign(bufferSize, 0.0);
     //	right.assign(bufferSize, 0.0);
-	volHistory.assign(numHeight, 0.0);
-	
-	bufferCounter	= 0;
-	drawCounter		= 0;
-	smoothedVol     = 0.0;
-	scaledVol		= 0.0;
+    volHistory.assign(numHeight, 0.0);
+    
+    bufferCounter	= 0;
+    drawCounter		= 0;
+    smoothedVol     = 0.0;
+    scaledVol		= 0.0;
     
     buffer = new float[initialBufferSize];
-	memset(buffer, 0, initialBufferSize * sizeof(float));
+    memset(buffer, 0, initialBufferSize * sizeof(float));
     volHistory.push_back( scaledVol );
     
-	ofSoundStreamSetup(0, 1, this, sampleRate, initialBufferSize, 1);
-
+    ofSoundStreamSetup(0, 1, this, sampleRate, initialBufferSize, 1);
+    
     
     
     mesh.setMode(OF_PRIMITIVE_TRIANGLES);
     
-    numWidth = 180;
+    numWidth = 256;
     numHeight = 80;
     vertexSpacing = 10;
     
@@ -57,7 +57,7 @@ void ofApp::setup(){
     
     float _xRandom = ofRandom(24,48);
     float _yRandom = ofRandom(24,48);
-
+    
     for (int j=0; j<numHeight; j++) {
         for (int i=0; i<numWidth; i++) {
             ofVec3f _a = ofVec3f( i * vertexSpacing - plateWidth/2, j * vertexSpacing - plateHeight/2, 0 );
@@ -65,7 +65,7 @@ void ofApp::setup(){
             ofColor _c = ofColor::fromHsb(0, 120, 255, 255);
             mesh.addColor( _c );
             
-
+            
             float _movingSpeed = 0.5;
             
             // _noise wird als zPosition Ÿbersetzt. (0-1)
@@ -99,6 +99,8 @@ void ofApp::setup(){
     
     cam.setupPerspective();
     
+    //    cam.setDistance(1000);
+    
 }
 
 //--------------------------------------------------------------
@@ -106,11 +108,11 @@ void ofApp::update(){
     
     scaledVol = ofMap(smoothedVol, 0.0, 0.17, 0.0, 30.0, true);
     volHistory.push_back( scaledVol );
-	
+    
     if( volHistory.size() >= numHeight ){
-		volHistory.erase(volHistory.begin(), volHistory.begin()+1);
-	}
-
+        volHistory.erase(volHistory.begin(), volHistory.begin()+1);
+    }
+    
     
     for (int j=0; j<numHeight; j++) {
         for (int i=0; i<numWidth; i++) {
@@ -137,55 +139,69 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-
+    
+    
+    
+    
     cam.begin();
     
-    ofRotateX(82);
-    ofRotateY(0);
-    ofRotateZ(270);
+    ofPushMatrix();
     
+    ofTranslate( 0, 0, 200 );
+    ofRotateX( 82 );
+    ofRotateY( 0 );
+    ofRotateZ( 270 );
+    
+    ofPushStyle();
+    for (int j=0; j<numHeight; j++) {
+        for (int i=0; i<numWidth; i++) {
+            int _index = i + j * numWidth;
+            mesh.setColor( _index, ofColor::fromHsb(0,0,255,0) );
+        }
+    }
+    
+//    mesh.draw();
+    ofPopStyle();
+    
+    
+    ofPushStyle();
     for (int j=0; j<numHeight; j++) {
         for (int i=0; i<numWidth; i++) {
             int _index = i + j * numWidth;
             mesh.setColor( _index, ofColor::fromHsb(0,0,255,255) );
         }
     }
-
-    mesh.draw();
-
-    for (int j=0; j<numHeight; j++) {
-        for (int i=0; i<numWidth; i++) {
-            int _index = i + j * numWidth;
-            mesh.setColor( _index, ofColor::fromHsb(0,0,0,255) );
-        }
-    }
     
     mesh.drawWireframe();
+    ofPopStyle();
+    
+    ofPopMatrix();
     
     cam.end();
+    
     
 }
 
 
 void ofApp::audioIn(float * input, int bufferSize, int nChannels){
-	
-	float curVol = 0.0;
-	int numCounted = 0;
     
-	for (int i = 0; i < bufferSize; i++){
-		left[i]		= input[i];        
-		curVol += left[i] * left[i];
-		numCounted+=2;
-	}
-	
-	curVol /= (float)numCounted;
-	curVol = sqrt( curVol );
-	
-	smoothedVol *= 0.93;
-	smoothedVol += 0.07 * curVol;
-	
-	bufferCounter++;
-	
+    float curVol = 0.0;
+    int numCounted = 0;
+    
+    for (int i = 0; i < bufferSize; i++){
+        left[i]		= input[i];
+        curVol += left[i] * left[i];
+        numCounted+=2;
+    }
+    
+    curVol /= (float)numCounted;
+    curVol = sqrt( curVol );
+    
+    smoothedVol *= 0.93;
+    smoothedVol += 0.07 * curVol;
+    
+    bufferCounter++;
+    
 }
 
 
@@ -203,7 +219,7 @@ void ofApp::touchDown(ofTouchEventArgs & touch){
 
 //--------------------------------------------------------------
 void ofApp::touchMoved(ofTouchEventArgs & touch){
-
+    
 }
 
 
