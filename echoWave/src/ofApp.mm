@@ -1,30 +1,34 @@
 #include "ofApp.h"
+#import <AVFoundation/AVFoundation.h>
+
 
 //--------------------------------------------------------------
 void ofApp::setup(){
     
-//    ofSetOrientation(OF_ORIENTATION_90_RIGHT);
-    ofSetFrameRate(60);
+    //    ofSetOrientation(OF_ORIENTATION_90_RIGHT);
+    //    ofSetFrameRate(60);
     
-    ofxAccelerometer.setup();               //accesses accelerometer data
-    ofxiPhoneAlerts.addListener(this);      //allows elerts to appear while app is running
-    ofRegisterTouchEvents(this);            //method that passes touch events
+    //    ofxAccelerometer.setup();               //accesses accelerometer data
+    //    ofxiPhoneAlerts.addListener(this);      //allows elerts to appear while app is running
+    //    ofRegisterTouchEvents(this);            //method that passes touch events
     
-    [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationFade];
+    //    [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationFade];
     
     ofBackground(10, 255);
     
-    ofSetDepthTest(true);
+//    ofSetDepthTest(true);
     
     
-    left.clear();
-    volHistory.clear();
+//    left.clear();
+//    volHistory.clear();
     //
+    numWidth = 256;
     numHeight = 256;
     
     bufferSize = 128;
     initialBufferSize = 128;
     sampleRate = 44100;
+    ofSoundStreamSetup(0, 1, this, sampleRate, initialBufferSize, 4);
     
     
     left.assign(bufferSize, 0.0);
@@ -40,14 +44,7 @@ void ofApp::setup(){
     memset(buffer, 0, initialBufferSize * sizeof(float));
     volHistory.push_back( scaledVol );
     
-    ofSoundStreamSetup(0, 1, this, sampleRate, initialBufferSize, 1);
     
-    
-    
-    mesh.setMode(OF_PRIMITIVE_TRIANGLES);
-    
-    numWidth = 256;
-    numHeight = 80;
     vertexSpacing = 10;
     
     plateWidth = (numWidth-1) * vertexSpacing;
@@ -81,6 +78,8 @@ void ofApp::setup(){
         }
     }
     
+    
+    mesh.setMode(OF_PRIMITIVE_TRIANGLES);
     for (int j=0; j<numHeight-1; j++) {
         for (int i=0; i<numWidth-1; i++) {
             
@@ -97,11 +96,15 @@ void ofApp::setup(){
         }
     }
     
-    cam.setupPerspective();
     
+    //    cam.setupPerspective();
     //    cam.setDistance(1000);
     
+    
 }
+
+
+
 
 //--------------------------------------------------------------
 void ofApp::update(){
@@ -113,25 +116,26 @@ void ofApp::update(){
         volHistory.erase(volHistory.begin(), volHistory.begin()+1);
     }
     
-    
-    for (int j=0; j<numHeight; j++) {
-        for (int i=0; i<numWidth; i++) {
-            int _index = i + j * numWidth;
-            
-            zPos[_index] = zPos[_index] + zDirection[_index];
-            if (zPos[_index]>zSize/2) zDirection[_index] = -zDirection[_index];
-            if (zPos[_index]<0) zDirection[_index] = -zDirection[_index];
-            
+    if (zPos.size() > 0 && zDirection.size() > 0) {
+        for (int j=0; j<numHeight; j++) {
+            for (int i=0; i<numWidth; i++) {
+                int _index = i + j * numWidth;
+                
+                zPos[_index] = zPos[_index] + zDirection[_index];
+                if (zPos[_index]>zSize/2) zDirection[_index] = -zDirection[_index];
+                if (zPos[_index]<0) zDirection[_index] = -zDirection[_index];
+                
+            }
         }
-    }
-    
-    for (int j=0; j<numHeight; j++) {
-        for (int i=0; i<numWidth; i++) {
-            int _index = i + j * numWidth;
-            
-            ofVec3f _vec = mesh.getVertex(_index);
-            mesh.setVertex( _index, ofVec3f( _vec.x, _vec.y, zPos[_index] * volHistory[i] ));
-            
+        
+        for (int j=0; j<numHeight; j++) {
+            for (int i=0; i<numWidth; i++) {
+                int _index = i + j * numWidth;
+                
+                ofVec3f _vec = mesh.getVertex(_index);
+                mesh.setVertex( _index, ofVec3f( _vec.x, _vec.y, zPos[_index] * volHistory[i] ));
+                
+            }
         }
     }
     
@@ -139,7 +143,6 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-    
     
     
     
@@ -152,28 +155,35 @@ void ofApp::draw(){
     ofRotateY( 0 );
     ofRotateZ( 270 );
     
-    ofPushStyle();
-    for (int j=0; j<numHeight; j++) {
-        for (int i=0; i<numWidth; i++) {
-            int _index = i + j * numWidth;
-            mesh.setColor( _index, ofColor::fromHsb(0,0,255,0) );
+    if (mesh.getNumVertices() > 0) {
+    
+        ofPushStyle();
+        
+        for (int j=0; j<numHeight; j++) {
+            for (int i=0; i<numWidth; i++) {
+                int _index = i + j * numWidth;
+                mesh.setColor( _index, ofColor::fromHsb(0,0,255,0) );
+            }
         }
+        
+        
+        //    mesh.draw();
+        ofPopStyle();
+        
+        
+        ofPushStyle();
+        for (int j=0; j<numHeight; j++) {
+            for (int i=0; i<numWidth; i++) {
+                int _index = i + j * numWidth;
+                mesh.setColor( _index, ofColor::fromHsb(0,0,255,255) );
+            }
+        }
+        mesh.drawWireframe();
+
+        ofPopStyle();
+
     }
     
-//    mesh.draw();
-    ofPopStyle();
-    
-    
-    ofPushStyle();
-    for (int j=0; j<numHeight; j++) {
-        for (int i=0; i<numWidth; i++) {
-            int _index = i + j * numWidth;
-            mesh.setColor( _index, ofColor::fromHsb(0,0,255,255) );
-        }
-    }
-    
-    mesh.drawWireframe();
-    ofPopStyle();
     
     ofPopMatrix();
     
@@ -191,7 +201,7 @@ void ofApp::audioIn(float * input, int bufferSize, int nChannels){
     for (int i = 0; i < bufferSize; i++){
         left[i]		= input[i];
         curVol += left[i] * left[i];
-        numCounted+=2;
+        numCounted += 2;
     }
     
     curVol /= (float)numCounted;

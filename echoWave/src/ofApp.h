@@ -34,8 +34,10 @@ public:
     vector<float> zPos;
     vector<float> zDirection;
     
-    int numWidth, numHeight;
-    float plateWidth, plateHeight;
+    int numWidth;
+    int numHeight;
+    float plateWidth;
+    float plateHeight;
     
     int vertexSpacing;
     
