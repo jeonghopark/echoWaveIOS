@@ -1,5 +1,54 @@
 #include "ofApp.h"
-#import <AVFoundation/AVFoundation.h>
+//#import <AVFoundation/AVFoundation.h>
+
+
+//--------------------------------------------------------------
+void logSIMD(const simd::float4x4 &matrix) {
+    std::stringstream output;
+    int columnCount = sizeof(matrix.columns) / sizeof(matrix.columns[0]);
+    for (int column = 0; column < columnCount; column++) {
+        int rowCount = sizeof(matrix.columns[column]) / sizeof(matrix.columns[column][0]);
+        for (int row = 0; row < rowCount; row++) {
+            output << std::setfill(' ') << std::setw(9) << matrix.columns[column][row];
+            output << ' ';
+        }
+        output << std::endl;
+    }
+    output << std::endl;
+    //NSLog(@"%s", output.str().c_str());
+}
+
+
+//--------------------------------------------------------------
+ofMatrix4x4 matFromSimd(const simd::float4x4 &matrix){
+    ofMatrix4x4 mat;
+    mat.set(matrix.columns[0].x,matrix.columns[0].y,matrix.columns[0].z,matrix.columns[0].w,
+            matrix.columns[1].x,matrix.columns[1].y,matrix.columns[1].z,matrix.columns[1].w,
+            matrix.columns[2].x,matrix.columns[2].y,matrix.columns[2].z,matrix.columns[2].w,
+            matrix.columns[3].x,matrix.columns[3].y,matrix.columns[3].z,matrix.columns[3].w);
+    return mat;
+}
+
+
+//--------------------------------------------------------------
+ofApp :: ofApp (ARSession * session){
+    this->session = session;
+    //    cout << "creating ofApp" << endl;
+}
+
+
+//--------------------------------------------------------------
+ofApp::ofApp() {
+    
+}
+
+
+//--------------------------------------------------------------
+ofApp :: ~ofApp () {
+    //    cout << "destroying ofApp" << endl;
+}
+
+
 
 
 //--------------------------------------------------------------
@@ -14,12 +63,19 @@ void ofApp::setup(){
     
     //    [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationFade];
     
-    ofBackground(10, 255);
+    //    ofBackground(10, 255);
     
     //    ofSetDepthTest(true);
     
     //    left.clear();
     //    volHistory.clear();
+    
+    processor = ARProcessor::create(session);
+    processor->setup();
+    
+    anchors = ARCore::ARAnchorManager::create(session);
+    
+    anchors->addAnchor(ofVec2f(0, 0));
     
     
     numWidth = 256;
@@ -45,21 +101,21 @@ void ofApp::setup(){
     volHistory.push_back( scaledVol );
     
     
-    vertexSpacing = 10;
+    vertexSpacing = 8;
     
     plateWidth = (numWidth-1) * vertexSpacing;
     plateHeight = (numHeight-1) * vertexSpacing;
     
     zSize = 60;
     
-    float _xRandom = ofRandom(24,48);
-    float _yRandom = ofRandom(24,48);
+    float _xRandom = ofRandom(24, 48);
+    float _yRandom = ofRandom(24, 48);
     
     for (int j=0; j<numHeight; j++) {
         for (int i=0; i<numWidth; i++) {
-            ofVec3f _a = ofVec3f( i * vertexSpacing - plateWidth/2, j * vertexSpacing - plateHeight/2, 0 );
+            ofVec3f _a = ofVec3f( i * vertexSpacing - 0, j * vertexSpacing - 0, 0 );
             mesh.addVertex(_a);
-            ofColor _c = ofColor::fromHsb(0, 0, 255, 255);
+            ofColor _c = ofColor::fromHsb(0, 255, 255, 255);
             mesh.addColor( _c );
             
             
@@ -109,6 +165,14 @@ void ofApp::setup(){
 //--------------------------------------------------------------
 void ofApp::update(){
     
+    
+    processor->update();
+    
+    mats.clear();
+    
+    anchors->update();
+    
+    
     scaledVol = ofMap(smoothedVol, 0.0, 0.17, 0.0, 30.0, true);
     volHistory.push_back( scaledVol );
     
@@ -144,54 +208,54 @@ void ofApp::update(){
 //--------------------------------------------------------------
 void ofApp::draw(){
     
+    ofEnableAlphaBlending();
     
+    ofDisableDepthTest();
+    processor->draw();
+    ofEnableDepthTest();
     
-    cam.begin();
+    anchors->loopAnchors([=](ARObject obj) -> void {
+        
+        camera.begin();
+        processor->setARCameraMatrices();
+        
+        ofPushMatrix();
+        ofMultMatrix(obj.modelMatrix);
+        
+        ofSetColor(255);
+        ofRotate(90,0,0,1);
+        ofScale(0.001, 0.001, 0.001);
+
+        
+        
+        ofPushMatrix();
+        
+        ofTranslate( 0, 0, 0 );
+        ofRotateXDeg( -90 );
+        ofRotateZDeg( 90 );
+        
+        ofPushStyle();
+
+        mesh.drawWireframe();
+        
+        ofPopStyle();
+        
+        ofPopMatrix();
+        
+        
+        
+        ofPopMatrix();
+        
+        camera.end();
+        
     
-    ofPushMatrix();
-    
-    ofTranslate( 0, 0, 0 );
-    ofRotateXDeg( -80 );
-    //    ofRotateYDeg( 90 );
-    ofRotateZDeg( 90 );
-    
-    //    if (mesh.getNumVertices() > 0) {
-    
-    ofPushStyle();
-    
-    //        for (int j=0; j<numHeight; j++) {
-    //            for (int i=0; i<numWidth; i++) {
-    //                int _index = i + j * numWidth;
-    //                mesh.setColor( _index, ofColor::fromHsb(0,0,255,0) );
-    //            }
-    //        }
-    
-    
-    //    mesh.draw();
-    ofPopStyle();
-    
-    
-    ofPushStyle();
-    //        for (int j=0; j<numHeight; j++) {
-    //            for (int i=0; i<numWidth; i++) {
-    //                int _index = i + j * numWidth;
-    //                mesh.setColor( _index, ofColor::fromHsb(0,0,255,255) );
-    //            }
-    //        }
-    
-    mesh.drawWireframe();
-    
-    ofPopStyle();
-    
-    //    }
-    
-    
-    ofPopMatrix();
-    
-    cam.end();
+    });
+
     
     
 }
+
+
 
 
 void ofApp::audioIn(float * input, int bufferSize, int nChannels){
@@ -224,6 +288,25 @@ void ofApp::exit(){
 
 //--------------------------------------------------------------
 void ofApp::touchDown(ofTouchEventArgs & touch){
+    
+    if (session.currentFrame.camera){
+        /*
+         NSLog(@"%@", session.currentFrame.camera);
+         
+         matrix_float4x4 translation = matrix_identity_float4x4;
+         translation.columns[3].z = -0.2;
+         
+         matrix_float4x4 transform = matrix_multiply(session.currentFrame.camera.transform, translation);
+         
+         NSLog(@"hi");
+         //   Add a new anchor to the session
+         ARAnchor *anchor = [[ARAnchor alloc] initWithTransform:transform];
+         [session addAnchor:anchor];
+         */
+        
+    }
+    
+    anchors->addAnchor(ofVec2f(touch.x,touch.y));
     
 }
 
